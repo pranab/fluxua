@@ -1,0 +1,64 @@
+/*
+ * Fluxua: A simple Hadoop map reduce workflow engine
+ * Author: Pranab Ghosh
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License"); you
+ * may not use this file except in compliance with the License. You may
+ * obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0 
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
+
+package org.fluxua.driver;
+
+import org.fluxua.driver.JobAdmin.JobParameter;
+import org.fluxua.driver.JobDriver.JobStatus;
+import java.util.concurrent.BlockingQueue;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import org.apache.hadoop.util.ToolRunner;
+
+/**
+ *
+ * @author pranab
+ */
+public class JobLauncher extends Thread {
+    private JobAdmin.JobParameter jobParameter;
+    private BlockingQueue<JobDriver.JobStatus> queue;
+
+    public JobLauncher(JobParameter jobParameter, BlockingQueue<JobStatus> queue) {
+        this.jobParameter = jobParameter;
+        this.queue = queue;
+    }
+
+
+    @Override
+    public void run() {
+        //start job
+        JobDriver.JobStatus status = null;
+        String[] args = jobParameter.getArgs();
+        String outputPath = args[args.length - 1];
+        try {
+            int exitCode = ToolRunner.run(jobParameter.getJob(), args);
+            status = 0 == exitCode ? 
+                new JobDriver.JobStatus(jobParameter.getJobName(), jobParameter.getJobInstance(), true, "job completed successfully", outputPath) :
+                new JobDriver.JobStatus(jobParameter.getJobName(), jobParameter.getJobInstance(), false, "job failed", outputPath);
+        } catch (Exception ex) {
+            status = new JobDriver.JobStatus(jobParameter.getJobName(), jobParameter.getJobInstance(), false, ex.getMessage(), outputPath);
+        }
+        
+        //notify driver
+        try {
+            queue.put(status);
+        } catch (InterruptedException ex) {
+            System.out.println("Failed to notify driver aabout job status");
+        }
+    }
+
+}
