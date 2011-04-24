@@ -77,9 +77,24 @@ public class JobAdmin {
             List<String> allInputPaths = new ArrayList<String>();
             List<String> confInputPaths = jobConfig.getInputPaths();
             
-            //configured input paths
+            //input and output  paths
+            String outputPath = jobConfig.getOutputPath();
             if (null != confInputPaths && !confInputPaths.isEmpty()){
-                allInputPaths.addAll(confInputPaths);
+                String inpProcClass = jobConfig.getInputProcessorClass();
+                if (null != inpProcClass){
+                    //process input and output paths
+                    Class<?> pathCls = Class.forName(inpProcClass);
+                    PathProcessor pathProc = (PathProcessor)pathCls.newInstance();
+                    List<String> processedPaths = new ArrayList<String>();
+                    for (String inpPath : confInputPaths){
+                       processedPaths.add(pathProc.processInputPath(inpPath)); 
+                    }
+                    allInputPaths.addAll(processedPaths);
+                    
+                    outputPath = pathProc.processOutputPath(outputPath);
+                } else {
+                    allInputPaths.addAll(confInputPaths);
+                }
             }            
             
             //dependent job output paths
@@ -90,7 +105,7 @@ public class JobAdmin {
             String inputPathSt = buildComaSepString(allInputPaths);
             args.add(inputPathSt);
             
-            args.add(jobConfig.getOutputPath());
+            args.add(outputPath);
             
             String[] argArr = {};
             argArr = args.toArray(argArr);

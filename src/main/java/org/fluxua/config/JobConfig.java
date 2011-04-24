@@ -35,6 +35,7 @@ public class JobConfig {
     private List<String> userParams;
     private boolean outputToBeDeleted;
     private boolean useDependentOutput;
+    private String inputProcessorClass;
 
     /**
      * @return the inputPaths
@@ -188,6 +189,20 @@ public class JobConfig {
      */
     public void setUseDependentOutput(boolean useDependentOutput) {
         this.useDependentOutput = useDependentOutput;
+    }
+
+    /**
+     * @return the inputProcessorClass
+     */
+    public String getInputProcessorClass() {
+        return inputProcessorClass;
+    }
+
+    /**
+     * @param inputProcessorClass the inputProcessorClass to set
+     */
+    public void setInputProcessorClass(String inputProcessorClass) {
+        this.inputProcessorClass = inputProcessorClass;
     }
 
     
