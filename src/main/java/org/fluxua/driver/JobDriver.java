@@ -18,6 +18,8 @@
 package org.fluxua.driver;
 
 import java.io.FileInputStream;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Scanner;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -35,8 +37,9 @@ public class JobDriver {
     private String flowName;
     private String instance;
     private BlockingQueue<JobDriver.JobStatus> queue = new ArrayBlockingQueue<JobDriver.JobStatus>(20);
+    private List<String> jobsToSkip;
 
-    public JobDriver(String flowName, String instance) {
+    public JobDriver(String flowName, String instance, List<String> jobsToSkip) {
         FileInputStream fis = null;
         try {
             jobAdmin = new JobAdmin();
@@ -44,6 +47,7 @@ public class JobDriver {
             System.out.println("Processed flows");
             this.flowName = flowName;
             this.instance = instance;
+            this.jobsToSkip = jobsToSkip;
         } catch (Exception ex) {
             System.out.println("Failed to initialize JobDriver" + ex);
             ex.printStackTrace();
@@ -72,6 +76,10 @@ public class JobDriver {
 
                     //launch new jobs
                     for (String jobName : jobNames){
+                        if (jobsToSkip.contains(jobName)){
+                            continue;
+                        }
+                        
                         List<String> outputPaths = null;
                         boolean independent = flowAdmin.isJobIndependent(flowName, jobName);
                         System.out.println("\nNext job: " + jobName + " is " + (independent? "independent" : "dependent"));
@@ -217,11 +225,16 @@ public class JobDriver {
             String configFile = cmdLineArgs[0];
             String flow = cmdLineArgs[1];
             String instance = cmdLineArgs[2];
+            List<String> jobsToSkip = new ArrayList<String>();
+            if (null != cmdLineArgs[3]){
+                String[] skipJobs = cmdLineArgs[3].split(",");
+                jobsToSkip = Arrays.asList(skipJobs);
+            }
             
             //intialize config
             Configurator.initialize(configFile);
             
-            JobDriver driver = new JobDriver(flow, instance);
+            JobDriver driver = new JobDriver(flow, instance, jobsToSkip);
             driver.start();
 
         } else {
