@@ -85,6 +85,7 @@ public class JobAdmin {
                     //process input and output paths
                     Class<?> pathCls = Class.forName(inpProcClass);
                     PathProcessor pathProc = (PathProcessor)pathCls.newInstance();
+                    pathProc.initialize(jobConfig.getInputProcessorArgMap());
                     List<String> processedPaths = new ArrayList<String>();
                     for (String inpPath : confInputPaths){
                        processedPaths.add(pathProc.processInputPath(inpPath)); 

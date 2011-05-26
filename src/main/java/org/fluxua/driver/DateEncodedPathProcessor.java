@@ -20,6 +20,7 @@ package org.fluxua.driver;
 import java.text.Format;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.Map;
 import java.util.TimeZone;
 
 /**
@@ -28,14 +29,20 @@ import java.util.TimeZone;
  */
 public class DateEncodedPathProcessor extends PathProcessor {
     private String date;
+    private int timeInterval;
+    
+    public  void initialize(Map<String, String> inputProcessorArgMap) {
+       timeUnit =  inputProcessorArgMap.get("timeUnit");
+       timeInterval =  Integer.parseInt(inputProcessorArgMap.get("timeUnit"));
+    }   
 
     public DateEncodedPathProcessor() {
         Calendar cal = Calendar.getInstance();
         cal.setTimeZone(TimeZone.getTimeZone("GMT"));   
         if (timeUnit.equals("hour")){
-            cal.add(Calendar.HOUR_OF_DAY, -1);
+            cal.add(Calendar.HOUR_OF_DAY, - timeInterval);
         } else {
-            cal.add(Calendar.DAY_OF_MONTH, -1);
+            cal.add(Calendar.DAY_OF_MONTH, -timeInterval);
         }
         Format formatter = new SimpleDateFormat("yyyy-MM-dd-HH");
         date = formatter.format(cal.getTime());

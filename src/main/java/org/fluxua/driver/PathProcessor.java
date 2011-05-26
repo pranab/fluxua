@@ -18,6 +18,8 @@
 
 package org.fluxua.driver;
 
+import java.util.Map;
+
 /**
  *
  * @author pranab
@@ -25,6 +27,8 @@ package org.fluxua.driver;
 public abstract class PathProcessor {
     protected String timeUnit;
 
+    public abstract void initialize(Map<String, String> inputProcessorArgMap);
+    
     public String processInputPath(String inputPath){
         return inputPath;
     }

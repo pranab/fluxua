@@ -18,6 +18,7 @@
 package org.fluxua.config;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  *
@@ -36,6 +37,8 @@ public class JobConfig {
     private boolean outputToBeDeleted;
     private boolean useDependentOutput;
     private String inputProcessorClass;
+    private List<String> inputProcessorArgs;
+    private Map<String, String> inputProcessorArgMap;
 
     /**
      * @return the inputPaths
@@ -203,6 +206,32 @@ public class JobConfig {
      */
     public void setInputProcessorClass(String inputProcessorClass) {
         this.inputProcessorClass = inputProcessorClass;
+    }
+
+    /**
+     * @return the inputProcessorArgs
+     */
+    public List<String> getInputProcessorArgs() {
+        return inputProcessorArgs;
+    }
+
+    /**
+     * @param inputProcessorArgs the inputProcessorArgs to set
+     */
+    public void setInputProcessorArgs(List<String> inputProcessorArgs) {
+        this.inputProcessorArgs = inputProcessorArgs;
+    }
+
+    /**
+     * @return the inputProcessorArgMap
+     */
+    public Map<String, String> getInputProcessorArgMap() {
+        if (null == inputProcessorArgMap){
+            for (int i = 0; i < inputProcessorArgs.size(); i += 2){
+                inputProcessorArgMap.put(inputProcessorArgs.get(i), inputProcessorArgs.get(i+1));
+            }
+        }
+        return inputProcessorArgMap;
     }
 
     
