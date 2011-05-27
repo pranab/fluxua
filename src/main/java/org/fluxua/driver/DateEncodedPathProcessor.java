@@ -33,7 +33,7 @@ public class DateEncodedPathProcessor extends PathProcessor {
     
     public  void initialize(Map<String, String> inputProcessorArgMap) {
        timeUnit =  inputProcessorArgMap.get("timeUnit");
-       timeInterval =  Integer.parseInt(inputProcessorArgMap.get("timeUnit"));
+       timeInterval =  Integer.parseInt(inputProcessorArgMap.get("timeInterval"));
     }   
 
     public DateEncodedPathProcessor() {

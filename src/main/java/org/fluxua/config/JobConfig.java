@@ -37,7 +37,7 @@ public class JobConfig {
     private boolean outputToBeDeleted;
     private boolean useDependentOutput;
     private String inputProcessorClass;
-    private List<String> inputProcessorArgs;
+    private List<String> inputProcessorParams;
     private Map<String, String> inputProcessorArgMap;
 
     /**
@@ -211,15 +211,15 @@ public class JobConfig {
     /**
      * @return the inputProcessorArgs
      */
-    public List<String> getInputProcessorArgs() {
-        return inputProcessorArgs;
+    public List<String> getInputProcessorParams() {
+        return inputProcessorParams;
     }
 
     /**
      * @param inputProcessorArgs the inputProcessorArgs to set
      */
-    public void setInputProcessorArgs(List<String> inputProcessorArgs) {
-        this.inputProcessorArgs = inputProcessorArgs;
+    public void setInputProcessorParams(List<String> inputProcessorParams) {
+        this.inputProcessorParams = inputProcessorParams;
     }
 
     /**
@@ -227,8 +227,8 @@ public class JobConfig {
      */
     public Map<String, String> getInputProcessorArgMap() {
         if (null == inputProcessorArgMap){
-            for (int i = 0; i < inputProcessorArgs.size(); i += 2){
-                inputProcessorArgMap.put(inputProcessorArgs.get(i), inputProcessorArgs.get(i+1));
+            for (int i = 0; i < inputProcessorParams.size(); i += 2){
+                inputProcessorArgMap.put(inputProcessorParams.get(i), inputProcessorParams.get(i+1));
             }
         }
         return inputProcessorArgMap;
