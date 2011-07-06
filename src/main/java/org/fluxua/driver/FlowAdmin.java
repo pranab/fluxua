@@ -19,6 +19,7 @@ package org.fluxua.driver;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import org.fluxua.config.Configurator;
@@ -32,7 +33,7 @@ import org.fluxua.config.FlowNode;
 public class FlowAdmin {
     private Map<String, Flow> flows = new HashMap<String, Flow>();
 
-    public FlowAdmin() {
+    public FlowAdmin() throws Exception {
         List<FlowConfig> flowConfigs = Configurator.instance().getFlowConfigs();
         for (FlowConfig flowConfig : flowConfigs){
             String flowName = flowConfig.getName();
@@ -43,7 +44,8 @@ public class FlowAdmin {
                 Job job = new Job(flowNode.getJob(), flowNode.getPreReqJobs());
                 flowJobs.add(job);
             }
-            Flow flow = new Flow(flowName, flowJobs);
+            String iterClassName = flowConfig.getIterClassName();
+            Flow flow = new Flow(flowName, flowJobs, iterClassName);
             flows.put(flowName, flow);
         }
 
@@ -65,7 +67,13 @@ public class FlowAdmin {
 
         return readyJobs;
     }
-
+ 
+    public Iterator getFlowIterator(String flowName){
+        Iterator iter = null;
+        Flow flow = flows.get(flowName);
+        return flow.getIterator();
+    }
+    
     public boolean isJobIndependent(String flowName, String jobName) throws Exception{
         Job job = findJob(flowName, jobName);
         return job.isIndependent();
@@ -130,10 +138,15 @@ public class FlowAdmin {
     private static class Flow {
         private String name;
         private List<Job> jobs;
+        private Iterator iterator;
 
-        public Flow(String name, List<Job> jobs) {
+        public Flow(String name, List<Job> jobs, String iterClassName) throws Exception {
             this.name = name;
             this.jobs = jobs;
+            if (null != iterClassName){
+                Class<?> iterCls = Class.forName(iterClassName);
+                iterator = (Iterator)iterCls.newInstance();
+            }
         }
 
         /**
@@ -152,6 +165,20 @@ public class FlowAdmin {
                 }
             }
             return targetJob;
+        }
+
+        /**
+         * @return the iterator
+         */
+        public Iterator getIterator() {
+            return iterator;
+        }
+
+        /**
+         * @param iterator the iterator to set
+         */
+        public void setIterator(Iterator iterator) {
+            this.iterator = iterator;
         }
 
     }

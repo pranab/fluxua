@@ -20,6 +20,7 @@ package org.fluxua.driver;
 import java.io.FileInputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Scanner;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -62,94 +63,101 @@ public class JobDriver {
             int totalJobInstanceCount = 0;
             boolean inError = false;
             boolean interactive = Configurator.instance().isInteractive();
-            while (true){
-                if (!inError){
-                    List <String> jobNames = flowAdmin.getReadyJobs(flowName);
+            Iterator iter = flowAdmin.getFlowIterator(flowName);
+            if(null == iter){
+                iter = new DefaultFlowIterator();
+            }
+            
+            while (iter.hasNext()) {
+                while (true){
+                    if (!inError){
+                        List <String> jobNames = flowAdmin.getReadyJobs(flowName);
 
-                    System.out.println("\nReady jobs: " + jobNames);
+                        System.out.println("\nReady jobs: " + jobNames);
 
-                    //quit if no more new jobs and no pending jobs
-                    if (jobNames.isEmpty() && 0 == jobInstanceCount){
-                        System.out.println("Quitting .. no more jobs to run and no more pending jobs. Num of jobs ran: " + totalJobInstanceCount);
-                        break;
-                    }
-
-                    //launch new jobs
-                    for (String jobName : jobNames){
-                        if (jobsToSkip.contains(jobName)){
-                            continue;
-                        }
-                        
-                        List<String> outputPaths = null;
-                        boolean independent = flowAdmin.isJobIndependent(flowName, jobName);
-                        System.out.println("\nNext job: " + jobName + " is " + (independent? "independent" : "dependent"));
-                        JobConfig jobConfig = Configurator.instance().findJobConfig(jobName);
-
-                        //job dependent and output of dependent jobs to be used
-                        if (!independent && jobConfig.isUseDependentOutput()){
-                            outputPaths = flowAdmin.getPreReqOutputPaths(flowName, jobName);
-                            System.out.println("Output paths of pre req jobs: " + outputPaths);
+                        //quit if no more new jobs and no pending jobs
+                        if (jobNames.isEmpty() && 0 == jobInstanceCount){
+                            System.out.println("Quitting .. no more jobs to run and no more pending jobs. Num of jobs ran: " + totalJobInstanceCount);
+                            break;
                         }
 
-                        //get job instances to run
-                        List<JobAdmin.JobParameter> jobParams = jobAdmin.getJobParameter(jobName, instance, outputPaths);
-                        for (JobAdmin.JobParameter jobParam : jobParams){
-                            System.out.println("Next job: " + jobParam);
+                        //launch new jobs
+                        for (String jobName : jobNames){
+                            if (jobsToSkip.contains(jobName)){
+                                continue;
+                            }
 
-                            if (interactive){
-                                String command = "";
-                                System.out.println(">>Type c to continue or q to quit");
-                                Scanner sc = new Scanner(System.in);
-                                while (sc.hasNext()) {
-                                    command = sc.next();
-                                    if (command.equals("c") || command.equals("q")){
+                            List<String> outputPaths = null;
+                            boolean independent = flowAdmin.isJobIndependent(flowName, jobName);
+                            System.out.println("\nNext job: " + jobName + " is " + (independent? "independent" : "dependent"));
+                            JobConfig jobConfig = Configurator.instance().findJobConfig(jobName);
+
+                            //job dependent and output of dependent jobs to be used
+                            if (!independent && jobConfig.isUseDependentOutput()){
+                                outputPaths = flowAdmin.getPreReqOutputPaths(flowName, jobName);
+                                System.out.println("Output paths of pre req jobs: " + outputPaths);
+                            }
+
+                            //get job instances to run
+                            List<JobAdmin.JobParameter> jobParams = jobAdmin.getJobParameter(jobName, instance, outputPaths);
+                            for (JobAdmin.JobParameter jobParam : jobParams){
+                                System.out.println("Next job: " + jobParam);
+
+                                if (interactive){
+                                    String command = "";
+                                    System.out.println(">>Type c to continue or q to quit");
+                                    Scanner sc = new Scanner(System.in);
+                                    while (sc.hasNext()) {
+                                        command = sc.next();
+                                        if (command.equals("c") || command.equals("q")){
+                                            break;
+                                        }
+                                        System.out.println(">>Type c to continue or q to quit");
+                                    }
+                                    if (command.equals("q")){
+                                        inError = true;
                                         break;
                                     }
-                                    System.out.println(">>Type c to continue or q to quit");
                                 }
-                                if (command.equals("q")){
-                                    inError = true;
-                                    break;
-                                }
-                            }
 
-                            if (!inError){
-                                JobLauncher launcher = new JobLauncher(jobParam, queue);
-                                launcher.start();
-                                flowAdmin.notifyJobStart(flowName, jobParam.getJobName());
-                                ++jobInstanceCount;
-                                ++totalJobInstanceCount;
+                                if (!inError){
+                                    JobLauncher launcher = new JobLauncher(jobParam, queue);
+                                    launcher.start();
+                                    flowAdmin.notifyJobStart(flowName, jobParam.getJobName());
+                                    ++jobInstanceCount;
+                                    ++totalJobInstanceCount;
+                                }
                             }
                         }
+                    }  else {
+                        //quit if in error and no pending jobs
+                        if (0 == jobInstanceCount){
+                            break;
+                        }
                     }
-                }  else {
-                    //quit if in error and no pending jobs
-                    if (0 == jobInstanceCount){
-                        break;
+
+
+                    //blocking wait for status back
+                    if (jobInstanceCount > 0){
+                        System.out.println("Going to wait for the next job to complete");
+                        JobStatus status = queue.take();
+                        System.out.println("Job completed: " + status.getJobName());
+                        --jobInstanceCount;
+                        if (status.isValid()){
+                            flowAdmin.notifyJobComplete(flowName, status.getJobName(), status.outputPath);
+                        } else {
+                            flowAdmin.notifyJobFailed(flowName, status.getJobName());
+                            inError = true;
+                        }
+                        System.out.println(status);
                     }
                 }
 
-
-                //blocking wait for status back
-                if (jobInstanceCount > 0){
-                    System.out.println("Going to wait for the next job to complete");
-                    JobStatus status = queue.take();
-                    System.out.println("Job completed: " + status.getJobName());
-                    --jobInstanceCount;
-                    if (status.isValid()){
-                        flowAdmin.notifyJobComplete(flowName, status.getJobName(), status.outputPath);
-                    } else {
-                        flowAdmin.notifyJobFailed(flowName, status.getJobName());
-                        inError = true;
-                    }
-                    System.out.println(status);
+                if (!inError){
+                    System.out.println("Drive completed successfully, num of jobs run : " + totalJobInstanceCount);
+                } else {
+                    System.out.println("Drive completed unsuccessfully, num of jobs run : " + totalJobInstanceCount);
                 }
-            }
-
-            if (!inError){
-                System.out.println("Drive completed successfully, num of jobs run : " + totalJobInstanceCount);
-            } else {
-                System.out.println("Drive completed unsuccessfully, num of jobs run : " + totalJobInstanceCount);
             }
         } catch (Exception ex){
             System.out.println("Failed to run job: " + ex.getMessage());

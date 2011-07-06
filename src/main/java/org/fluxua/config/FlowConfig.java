@@ -28,6 +28,7 @@ public class FlowConfig {
     private String description;
     private String author;
     private List<FlowNode> flowNodes;
+    private String iterClassName;
 
     /**
      * @return the name
@@ -83,6 +84,20 @@ public class FlowConfig {
      */
     public void setFlowNodes(List<FlowNode> flowNodes) {
         this.flowNodes = flowNodes;
+    }
+
+    /**
+     * @return the iterClassName
+     */
+    public String getIterClassName() {
+        return iterClassName;
+    }
+
+    /**
+     * @param iterClassName the iterClassName to set
+     */
+    public void setIterClassName(String iterClassName) {
+        this.iterClassName = iterClassName;
     }
 
 }
