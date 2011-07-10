@@ -29,6 +29,7 @@ import org.fluxua.config.FlowNode;
 /**
  *
  * @author pranab
+ * Maanges DAG based hadoop job workflow.
  */
 public class FlowAdmin {
     private Map<String, Flow> flows = new HashMap<String, Flow>();
@@ -197,10 +198,10 @@ public class FlowAdmin {
 
         public Job(String name, List<String> preReqs) {
             this.name = name;
-			if (null != preReqs) {
+            if (null != preReqs) {
             	this.preReqs = preReqs;
             	preReqsCopy.addAll(this.preReqs);
-			}
+            }
             independent = this.preReqs.isEmpty();
             state = this.preReqs.isEmpty()? JobState.READY : JobState.BLOCKED;
         }

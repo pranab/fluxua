@@ -28,6 +28,9 @@ import org.codehaus.jackson.map.ObjectMapper;
 public class Configurator {
     private boolean interactive;
     private boolean verbose;
+    private String user;
+    private String note;
+    private String cluster;
     private List<JobConfig> jobConfigs;
     private List<FlowConfig> flowConfigs;
     
@@ -109,6 +112,48 @@ public class Configurator {
         }
         
         return jobConfig;
+    }
+
+    /**
+     * @return the user
+     */
+    public String getUser() {
+        return user;
+    }
+
+    /**
+     * @param user the user to set
+     */
+    public void setUser(String user) {
+        this.user = user;
+    }
+
+    /**
+     * @return the note
+     */
+    public String getNote() {
+        return note;
+    }
+
+    /**
+     * @param note the note to set
+     */
+    public void setNote(String note) {
+        this.note = note;
+    }
+
+    /**
+     * @return the cluster
+     */
+    public String getCluster() {
+        return cluster;
+    }
+
+    /**
+     * @param cluster the cluster to set
+     */
+    public void setCluster(String cluster) {
+        this.cluster = cluster;
     }
 
 }

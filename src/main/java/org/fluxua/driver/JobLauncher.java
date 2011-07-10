@@ -27,8 +27,12 @@ import org.apache.hadoop.util.ToolRunner;
 /**
  *
  * @author pranab
+ * Launches the hadoop job in the same thread and waits for completion communicates
+ * status back to the job driver, through the blocking queue.
  */
 public class JobLauncher extends Thread {
+    public static ThreadLocal<JobContext> jobContextThreadLoc = new ThreadLocal<JobContext>();
+    
     private JobAdmin.JobParameter jobParameter;
     private BlockingQueue<JobDriver.JobStatus> queue;
 
@@ -44,11 +48,25 @@ public class JobLauncher extends Thread {
         JobDriver.JobStatus status = null;
         String[] args = jobParameter.getArgs();
         String outputPath = args[args.length - 1];
+        
+        //set job context thread local
+        String jobName = jobParameter.getJobName();
+        String instanceName = jobParameter.getJobInstance();
+        JobContext jobContext = new JobContext();
+        jobContext.setJobName(jobName);
+        jobContext.setInstanceName(instanceName);
+        setJobContext(jobContext);
+        
         try {
+            //launch job
             int exitCode = ToolRunner.run(jobParameter.getJob(), args);
             status = 0 == exitCode ? 
                 new JobDriver.JobStatus(jobParameter.getJobName(), jobParameter.getJobInstance(), true, "job completed successfully", outputPath) :
                 new JobDriver.JobStatus(jobParameter.getJobName(), jobParameter.getJobInstance(), false, "job failed", outputPath);
+        
+            if (0 == exitCode){
+                collectJobMetrics();
+            }
         } catch (Exception ex) {
             status = new JobDriver.JobStatus(jobParameter.getJobName(), jobParameter.getJobInstance(), false, ex.getMessage(), outputPath);
         }
@@ -59,6 +77,18 @@ public class JobLauncher extends Thread {
         } catch (InterruptedException ex) {
             System.out.println("Failed to notify driver aabout job status");
         }
+    }
+    
+    private void collectJobMetrics() {
+        
+    }
+    
+    public static JobContext getJobContext(){
+        return jobContextThreadLoc.get();
+    }
+    
+    public static void setJobContext(JobContext jobContext){
+        jobContextThreadLoc.set(jobContext);
     }
 
 }

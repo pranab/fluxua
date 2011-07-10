@@ -20,8 +20,10 @@ package org.fluxua.driver;
 import java.io.FileInputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Scanner;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -67,8 +69,9 @@ public class JobDriver {
             if(null == iter){
                 iter = new DefaultFlowIterator();
             }
-            
+            //iterate flow
             while (iter.hasNext()) {
+                //iterate all jobs in flow
                 while (true){
                     if (!inError){
                         List <String> jobNames = flowAdmin.getReadyJobs(flowName);
@@ -229,25 +232,66 @@ public class JobDriver {
     }
 
     public static void main(String[] cmdLineArgs) throws Exception {
-        if (cmdLineArgs.length  >= 3){
-            String configFile = cmdLineArgs[0];
-            String flow = cmdLineArgs[1];
-            String instance = cmdLineArgs[2];
-            List<String> jobsToSkip = new ArrayList<String>();
-            if (null != cmdLineArgs[3]){
-                String[] skipJobs = cmdLineArgs[3].split(",");
-                jobsToSkip = Arrays.asList(skipJobs);
+        Map<String, String> argMap = parseCommandLineArgs(cmdLineArgs);
+        String configFile = null;
+        String flow = null;
+        String instance = null;
+        String skipJobs = null;
+        List<String> jobsToSkip = new ArrayList<String>();
+
+        configFile = argMap.get("c");
+        boolean valid = true;
+        if (null == configFile){
+            System.out.println("Missing config file... quiiting");
+            valid = false;
+        }
+        
+        if (valid){
+            flow = argMap.get("f");
+            if (null == flow){
+                System.out.println("Missing job flow ... quitting");
+                valid = false;
             }
-            
+        }
+        
+        if (valid){
+            instance = argMap.get("i");
+            if (null == instance){
+                System.out.println("Missing instance name... quitting");
+                valid = false;
+            }
+        }
+        
+        if (valid){
+            skipJobs = argMap.get("s");
+            if(null != skipJobs){
+                jobsToSkip = Arrays.asList(skipJobs.split(","));
+            }
+        }
+        
+        if (valid){
             //intialize config
             Configurator.initialize(configFile);
             
             JobDriver driver = new JobDriver(flow, instance, jobsToSkip);
             driver.start();
-
         } else {
-            System.out.println("Should provide at least config file,job flow and flow instance name to run");
+            System.out.println("Usage: hadoop jarFile className -c configFile -f flow -i instance -s skippedJobs ");
         }
+    }
+    
+    private static Map<String, String> parseCommandLineArgs(String[] args) throws Exception{
+        Map<String, String> argMap = new HashMap<String, String>();
+        if (args.length % 2 == 1){
+            throw new Exception("invalid command line arg");
+        }
+        
+        for (int i = 0; i < args.length; i += 2){
+            String clSwitch = args[i].substring(1, args[i].length());
+            argMap.put(clSwitch, args[i+1]);
+        }
+        
+        return argMap;
     }
 
 
