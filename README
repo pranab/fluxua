@@ -11,7 +11,7 @@ The Hadoop map reduce jobs are defined as nodes in a DAG (directed acyclic graph
 between the jobs. The workflow drives topologically orders the DAG and executes the jobs in proper order, starting
 with the jobs at the root nodes of the DAG.
 
-Each MR job is executed from a separate thread. The executing thread communicate with the driver through a blocking 
+Each MR job is executed from a separate thread. The executing thread communicates with the driver through a blocking 
 queue. All MR jobs at intermediate DAG nodes should do blocking executions of the job, so that the dependent jobs can
 be launched only after the parent jobs have completed.
 
@@ -22,8 +22,11 @@ section has the system configurations. The second sections has configuration of 
 flow definitions in terms of jobs. Here is an example from a data mining project.
 
 {
+	"user" : "pranab",
+    "note" : " testing",	
 	"interactive" : true,
 	"verbose" : true,
+    "cluster" : "none",
 	"jobConfigs" :
 	[
 		{
@@ -95,6 +98,8 @@ flow definitions in terms of jobs. Here is an example from a data mining project
 	]
 }
 
+Sample Shell Script
+===================
 Here is sample shell script for using the driver. The entry point is the class org.fluxua.driver.JobDriver
 
 DR_JAR=/home/pranab/Projects/fluxua/target/fluxua-1.0.jar
@@ -105,7 +110,12 @@ export HADOOP_CLASSPATH=$DR_JAR:$JAR
 echo $HADOOP_CLASSPATH
 hadoop fs -rmr /zaal/dor/output
 hadoop fs -rmr /zaal/bcl/output
-hadoop jar $JAR $CL $CONFIG bayesian sample
+hadoop jar $JAR $CL -c $CONFIG -f bayesian -i sample
+
+Additional Info
+===============
+More details can be found in my blogpost here
+http://pkghosh.wordpress.com/2011/05/22/hadoop-orchestration
 
 
 
