@@ -39,6 +39,7 @@ public class JobConfig {
     private String inputProcessorClass;
     private List<String> inputProcessorParams;
     private Map<String, String> inputProcessorArgMap;
+    private List<Alert> alerts;
 
     /**
      * @return the inputPaths
@@ -233,6 +234,14 @@ public class JobConfig {
         }
         return inputProcessorArgMap;
     }
+
+	public List<Alert> getAlerts() {
+		return alerts;
+	}
+
+	public void setAlerts(List<Alert> alerts) {
+		this.alerts = alerts;
+	}
 
     
 }
