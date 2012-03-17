@@ -19,84 +19,8 @@ Configuration
 =============
 The jobs and the workflow are defined ina JSON file as below. The configuration has three main sections. The first
 section has the system configurations. The second sections has configuration of all thge jobs. The las sectipns has 
-flow definitions in terms of jobs. Here is an example from a data mining project.
+flow definitions in terms of jobs. There is an example from a data mining project in the resource directory.
 
-{
-	"user" : "pranab",
-    "note" : " testing",	
-	"interactive" : true,
-	"verbose" : true,
-    "cluster" : "none",
-	"jobConfigs" :
-	[
-		{
-			"name" : "dor",
-			"description" : "domain range of atributes",
-			"author" : "pranab",
-			"className" : "mawazo.zaal.Main",
-			"inputPaths" : ["/zaal/dor/input"],
-			"outputPath" : "/zaal/dor/output",
-			"files" : ["/home/pranab/Projects/zaal/meta/metadata.json"],
-			"libjars" : 
-			["/home/pranab/Projects/lib/jackson/jackson-core-lgpl-1.6.3.jar",
-			"/home/pranab/Projects/lib/jackson/jackson-mapper-lgpl-1.6.3.jar" ],
-			"userParams" : 
-			["zaal.dynAttr.file.path=/zaal/meta/domrange.txt",
-			"zaal.metaData.file.path=/zaal/meta/metadata.json",
-			"mapred.map.tasks.speculative.execution=false",
-			"mapred.reduce.tasks.speculative.execution=false"],
-			"useDependentOutput" : false
-		},
-		{
-			"name" : "bcl",
-			"description" : "bayesian classifier",
-			"author" : "pranab",
-			"className" : "mawazo.zaal.Main",
-			"inputPaths" : ["/zaal/dor/input"],
-			"outputPath" : "/zaal/bcl/output",
-			"libjars" : 
-			["/home/pranab/Projects/lib/jackson/jackson-core-lgpl-1.6.3.jar",
-			"/home/pranab/Projects/lib/jackson/jackson-mapper-lgpl-1.6.3.jar" ],
-			"userParams" : 
-			["zaal.dynAttr.file.path=/zaal/meta/domrange.txt",
-			"zaal.metaData.file.path=/zaal/meta/metadata.json",
-			"mapred.map.tasks.speculative.execution=false",
-			"mapred.reduce.tasks.speculative.execution=false"],
-			"useDependentOutput" : false
-
-		},
-		{
-			"name" : "hva",
-			"description" : "hold out validation",
-			"author" : "pranab",
-			"className" : "mawazo.zaal.Main",
-			"outputPath" : "zaal/hva/output"
-		}
-	],
-	"flowConfigs" : 
-	[
-		{
-			"name" : "bayesian",
-			"description" : "bayesian prediction for visitor profile",
-			"author" : "pranab",
-			"flowNodes" : 
-			[
-				{
-					"job" : "dor"
-				},
-				{
-					"job" : "bcl",
-					"preReqJobs" : ["dor"]
-				},
-				{
-					"job" : "hva",
-					"preReqJobs" : ["bcl"]
-				}
-			]
-
-		}
-	]
-}
 
 Sample Shell Script
 ===================
