@@ -29,6 +29,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import org.fluxua.config.Configurator;
 import org.fluxua.config.JobConfig;
+import org.fluxua.service.ServiceManager;
 
 /**
  *
@@ -41,6 +42,12 @@ public class JobDriver {
     private String instance;
     private BlockingQueue<JobDriver.JobStatus> queue = new ArrayBlockingQueue<JobDriver.JobStatus>(20);
     private List<String> jobsToSkip;
+    public enum DriveMode {
+		   INTERACTIVE, SERVICE
+	}
+    private DriveMode mode =DriveMode. INTERACTIVE;
+    private String errorMsg;
+    private  boolean inError = false;
 
     public JobDriver(String flowName, String instance, List<String> jobsToSkip) {
         FileInputStream fis = null;
@@ -59,11 +66,10 @@ public class JobDriver {
 
     }
 
-    private void start(){
+    public void start(){
         try {
             int jobInstanceCount = 0;
             int totalJobInstanceCount = 0;
-            boolean inError = false;
             boolean interactive = Configurator.instance().isInteractive();
             Iterator iter = flowAdmin.getFlowIterator(flowName);
             if(null == iter){
@@ -76,12 +82,11 @@ public class JobDriver {
                     if (!inError){
                         List <String> jobNames = flowAdmin.getReadyJobs(flowName);
 
-                        System.out.println("\nReady jobs: " + jobNames);
-
+                    	System.out.println("\nReady jobs: " + jobNames);
                         //quit if no more new jobs and no pending jobs
                         if (jobNames.isEmpty() && 0 == jobInstanceCount){
-                            System.out.println("Quitting .. no more jobs to run and no more pending jobs. Num of jobs ran: " + totalJobInstanceCount);
-                            break;
+                        	System.out.println("Quitting .. no more jobs to run and no more pending jobs. Num of jobs ran: " + totalJobInstanceCount);
+                        	break;
                         }
 
                         //launch new jobs
@@ -92,13 +97,13 @@ public class JobDriver {
 
                             List<String> outputPaths = null;
                             boolean independent = flowAdmin.isJobIndependent(flowName, jobName);
-                            System.out.println("\nNext job: " + jobName + " is " + (independent? "independent" : "dependent"));
+                        	System.out.println("\nNext job: " + jobName + " is " + (independent? "independent" : "dependent"));
                             JobConfig jobConfig = Configurator.instance().findJobConfig(jobName);
 
                             //job dependent and output of dependent jobs to be used
                             if (!independent && jobConfig.isUseDependentOutput()){
                                 outputPaths = flowAdmin.getPreReqOutputPaths(flowName, jobName);
-                                System.out.println("Output paths of pre req jobs: " + outputPaths);
+                            	System.out.println("Output paths of pre req jobs: " + outputPaths);
                             }
 
                             //get job instances to run
@@ -142,7 +147,7 @@ public class JobDriver {
 
                     //blocking wait for status back
                     if (jobInstanceCount > 0){
-                        System.out.println("Going to wait for the next job to complete");
+                    	System.out.println("Going to wait for the next job to complete");
                         JobStatus status = queue.take();
                         System.out.println("Job completed: " + status.getJobName());
                         --jobInstanceCount;
@@ -159,11 +164,13 @@ public class JobDriver {
                 if (!inError){
                     System.out.println("Drive completed successfully, num of jobs run : " + totalJobInstanceCount);
                 } else {
-                    System.out.println("Drive completed unsuccessfully, num of jobs run : " + totalJobInstanceCount);
+                	errorMsg = "Drive completed unsuccessfully, num of jobs run : " + totalJobInstanceCount;
+                    System.out.println(errorMsg);
                 }
             }
         } catch (Exception ex){
-            System.out.println("Failed to run job: " + ex.getMessage());
+        	errorMsg = "Failed to run job: " + ex.getMessage();
+            System.out.println(errorMsg);
             ex.printStackTrace();
         }
 
@@ -231,14 +238,40 @@ public class JobDriver {
         }
     }
 
-    public static void main(String[] cmdLineArgs) throws Exception {
+	public DriveMode getMode() {
+		return mode;
+	}
+
+	public void setMode(DriveMode mode) {
+		this.mode = mode;
+	}
+
+    public String getErrorMsg() {
+		return errorMsg;
+	}
+
+	public boolean isInError() {
+		return inError;
+	}
+
+	public static void main(String[] cmdLineArgs) throws Exception {
         Map<String, String> argMap = parseCommandLineArgs(cmdLineArgs);
+        String mode  = argMap.get("m");
+        if (mode.equals("i")) {
+        	runInteractive(argMap);
+        } else {
+        	runService(argMap);
+        }
+    }
+    
+    private static  void runInteractive(Map<String, String> argMap) throws Exception {
         String configFile = null;
         String flow = null;
         String instance = null;
         String skipJobs = null;
         List<String> jobsToSkip = new ArrayList<String>();
 
+        System.out.println("running interactive");
         configFile = argMap.get("c");
         boolean valid = true;
         if (null == configFile){
@@ -278,6 +311,14 @@ public class JobDriver {
         } else {
             System.out.println("Usage: hadoop jarFile className -c configFile -f flow -i instance -s skippedJobs ");
         }
+   	
+    }
+    
+    private static  void runService(Map<String, String> argMap) throws Exception {
+        System.out.println("running as service");
+        String propFile  = argMap.get("p");
+   	    ServiceManager svcMan = new ServiceManager(propFile);
+   	    svcMan.run();
     }
     
     private static Map<String, String> parseCommandLineArgs(String[] args) throws Exception{
@@ -293,6 +334,7 @@ public class JobDriver {
         
         return argMap;
     }
+
 
 
 }
