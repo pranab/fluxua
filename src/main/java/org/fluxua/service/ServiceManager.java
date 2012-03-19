@@ -21,8 +21,12 @@ import java.io.FileInputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 import org.codehaus.jackson.map.ObjectMapper;
+import org.fluxua.driver.JobDriver;
 
 import redis.clients.jedis.Jedis;
 
@@ -34,6 +38,8 @@ public class ServiceManager implements Runnable {
 	private static final String COM_STOP = "stop";
 	private static final String COM_STATUS = "status";
 	private List<JobRequest> requests = new  ArrayList<JobRequest>();
+    private BlockingQueue<JobResponse> queue = new ArrayBlockingQueue<JobResponse>(20);
+    private ObjectMapper mapper = new ObjectMapper(); 
 	
 	public ServiceManager(String propFile)  throws Exception {
 		Properties prop = new Properties();
@@ -56,24 +62,33 @@ public class ServiceManager implements Runnable {
 			String requestSt = jedis.rpop(requestQueue);
 			if (null != requestSt) {
 				System.out.println("got from request queue:" + requestSt);
-		        ObjectMapper mapper = new ObjectMapper(); 
 		        try {
 		        	//launch the flow
 					JobRequest request = mapper.readValue(requestSt, JobRequest.class);
 					requests.add(request);
-					FlowLauncher launcher = new FlowLauncher(request, this);
+					FlowLauncher launcher = new FlowLauncher(request, queue);
 					launcher.start();
 				} catch (Exception e) {
 					System.out.println("invalid request");
 				}
-				
 			}
+
+			//check response queue for flow completion
+			try {
+				JobResponse response = queue.poll(1, TimeUnit.SECONDS);
+				if (null != response) {
+			        String responseSt = mapper.writeValueAsString(response);
+			        JobRequest req = getRequest(response.getRequestID());
+			        jedis.lpush(req.getReplyChannel(), responseSt);
+				}
+			} catch (Exception e) {
+				
+			}		
 			
 			//admin queue
 			String adminCom = jedis.rpop(adminQueueIn);
 			if (null != adminCom) {
 				System.out.println("got from admin queue:" + adminCom);
-				
 				if ( adminCom.equals(COM_STOP)) {
 					System.out.println("got stop command from admin queue....  shutting down");
 					jedis.lpush(adminQueueOut,"shutting down");
@@ -83,8 +98,17 @@ public class ServiceManager implements Runnable {
 			}
 		}
 	}
+	
+	private  JobRequest getRequest(String requestID) {
+		JobRequest req = null;
+		for (JobRequest request : requests) {
+			if (request.getRequestID().equals(requestID)) {
+				req = request;
+				break;
+			}
+		}
+		
+		return req;
+	}
 
-   public void handleResponse(JobResponse response) {
-	   
-   }
 }

@@ -17,18 +17,20 @@
 
 package org.fluxua.service;
 
+import java.util.concurrent.BlockingQueue;
+
 import org.fluxua.config.Configurator;
 import org.fluxua.driver.JobDriver;
 
 public class FlowLauncher extends Thread {
 	private JobRequest request;
 	private JobResponse response;
-	private ServiceManager svcMan;
+	private BlockingQueue<JobResponse> queue;
 
-	public FlowLauncher(JobRequest request, ServiceManager svcMan) {
+	public FlowLauncher(JobRequest request, BlockingQueue<JobResponse> queue) {
 		super();
 		this.request = request;
-		this.svcMan = svcMan;
+		this.queue = queue;
 		response = new JobResponse();
 		response.setRequestID(request.getRequestID());
 	}
@@ -37,8 +39,8 @@ public class FlowLauncher extends Thread {
     public void run() {
     	boolean valid = request.validate();
     	if (!valid) {
-    		response.setMsg(request.getErrorMsg());
-     	   response.setSucceeded(false);
+    		response.setMsg(request.getMsg());
+     	    response.setSucceeded(false);
     	} else {
            try {
         	   Configurator.initialize(request.getConfigFile());
@@ -53,7 +55,10 @@ public class FlowLauncher extends Thread {
            }
     	}
     	
-    	svcMan.handleResponse(response);
+    	try {
+			queue.put(response);
+		} catch (InterruptedException e) {
+		}
     }	
 	
 	

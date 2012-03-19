@@ -27,7 +27,8 @@ public class JobRequest {
 	private String flow = null;
     private String instance = null;
     private List<String> jobsToSkip = new ArrayList<String>();
-    private String errorMsg;
+    private String msg;
+    private boolean succeeded = true;
 
     public String getRequestID() {
 		return requestID;
@@ -69,25 +70,25 @@ public class JobRequest {
 	public boolean validate() {
 		boolean valid = true;
         if (null == configFile){
-        	errorMsg = "Missing config file... quiiting";
+        	msg = "Missing config file... quiiting";
             valid = false;
         }
         if (valid){
             if (null == flow){
-                errorMsg = "Missing job flow ... quitting";
+                msg = "Missing job flow ... quitting";
                 valid = false;
             }
         }
         if (valid){
             if (null == instance){
-            	errorMsg =  "Missing instance name... quitting";
+            	msg =  "Missing instance name... quitting";
                 valid = false;
             }
         }
         return valid;
 	}
 
-	public String getErrorMsg() {
-		return errorMsg;
+	public String getMsg() {
+		return msg;
 	}
 }
