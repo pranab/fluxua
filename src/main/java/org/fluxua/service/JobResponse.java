@@ -17,33 +17,6 @@
 
 package org.fluxua.service;
 
-public class JobResponse {
-	private String requestID;
-	private String msg;
-	private boolean succeeded = true;
-
-	public String getRequestID() {
-		return requestID;
-	}
-
-	public void setRequestID(String requestID) {
-		this.requestID = requestID;
-	}
-
-	public String getMsg() {
-		return msg;
-	}
-
-	public void setMsg(String msg) {
-		this.msg = msg;
-	}
-
-	public boolean isSucceeded() {
-		return succeeded;
-	}
-
-	public void setSucceeded(boolean succeeded) {
-		this.succeeded = succeeded;
-	}
+public class JobResponse extends JobDetail {
 	
 }

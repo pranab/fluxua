@@ -19,46 +19,26 @@ package org.fluxua.service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
-public class JobRequest {
-	private String requestID;
-	private String replyChannel;
+public class JobRequest extends JobDetail{
 	private String configFile = null;
-	private String flow = null;
-    private String instance = null;
     private List<String> jobsToSkip = new ArrayList<String>();
-    private String msg;
-    private boolean succeeded = true;
+    private int opCode;
+	private String replyChannel;
+    public static final int OP_EXEC = 1;
+    public static final int OP_STATUS = 2;
+    
+    public JobRequest() {
+    	super();
+    	requestID = UUID.randomUUID().toString();
+    }
 
-    public String getRequestID() {
-		return requestID;
-	}
-	public void setRequestID(String requestID) {
-		this.requestID = requestID;
-	}
-	public String getReplyChannel() {
-		return replyChannel;
-	}
-	public void setReplyChannel(String replyChannel) {
-		this.replyChannel = replyChannel;
-	}
 	public String getConfigFile() {
 		return configFile;
 	}
 	public void setConfigFile(String configFile) {
 		this.configFile = configFile;
-	}
-	public String getFlow() {
-		return flow;
-	}
-	public void setFlow(String flow) {
-		this.flow = flow;
-	}
-	public String getInstance() {
-		return instance;
-	}
-	public void setInstance(String instance) {
-		this.instance = instance;
 	}
 	public List<String> getJobsToSkip() {
 		return jobsToSkip;
@@ -67,6 +47,19 @@ public class JobRequest {
 		this.jobsToSkip = jobsToSkip;
 	}
 
+	public int getOpCode() {
+		return opCode;
+	}
+	public void setOpCode(int opCode) {
+		this.opCode = opCode;
+	}
+	public String getReplyChannel() {
+		return replyChannel;
+	}
+	public void setReplyChannel(String replyChannel) {
+		this.replyChannel = replyChannel;
+	}
+	
 	public boolean validate() {
 		boolean valid = true;
         if (null == configFile){
@@ -87,8 +80,21 @@ public class JobRequest {
         }
         return valid;
 	}
+	
+	public boolean isExecuteRequest() {
+		return opCode == OP_EXEC;
+	}
 
-	public String getMsg() {
-		return msg;
+	public boolean isStatusRequest() {
+		return opCode == OP_STATUS;
+	}
+	
+	public JobResponse createResponse() {
+		JobResponse response = new JobResponse();
+		response.setRequestID(requestID);
+		response.setFlow(flow);
+		response.setInstance(instance);
+		response.setStatus(OP_STATUS);
+		return response;
 	}
 }

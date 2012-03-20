@@ -31,8 +31,7 @@ public class FlowLauncher extends Thread {
 		super();
 		this.request = request;
 		this.queue = queue;
-		response = new JobResponse();
-		response.setRequestID(request.getRequestID());
+		response = request.createResponse();
 	}
 	
     @Override
@@ -40,7 +39,7 @@ public class FlowLauncher extends Thread {
     	boolean valid = request.validate();
     	if (!valid) {
     		response.setMsg(request.getMsg());
-     	    response.setSucceeded(false);
+     	    response.setStatus(JobResponse.ST_INVALID);
     	} else {
            try {
         	   Configurator.initialize(request.getConfigFile());
@@ -48,13 +47,12 @@ public class FlowLauncher extends Thread {
 	           driver.start();
 	           if (driver.isInError()) {
 	        	   response.setMsg(driver.getErrorMsg());
-	        	   response.setSucceeded(false);
+	        	   response.setStatus(JobResponse.ST_FAILED);
 	           }
            } catch (Exception e) {
-        	   response.setSucceeded(false);
+        	   response.setStatus(JobResponse.ST_SUCCEEDED);
            }
     	}
-    	
     	try {
 			queue.put(response);
 		} catch (InterruptedException e) {

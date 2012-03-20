@@ -63,11 +63,20 @@ public class ServiceManager implements Runnable {
 			if (null != requestSt) {
 				System.out.println("got from request queue:" + requestSt);
 		        try {
-		        	//launch the flow
 					JobRequest request = mapper.readValue(requestSt, JobRequest.class);
-					requests.add(request);
-					FlowLauncher launcher = new FlowLauncher(request, queue);
-					launcher.start();
+					if (request.isExecuteRequest()) {
+			        	//launch the flow
+						requests.add(request);
+						FlowLauncher launcher = new FlowLauncher(request, queue);
+						launcher.start();
+						
+						JobResponse response = request.createResponse();
+						response.setStatus(JobResponse.ST_PENDING);
+				        String responseSt = mapper.writeValueAsString(response);
+				        jedis.lpush(request.getReplyChannel(), responseSt);
+					} else {
+						//return status
+					}
 				} catch (Exception e) {
 					System.out.println("invalid request");
 				}
