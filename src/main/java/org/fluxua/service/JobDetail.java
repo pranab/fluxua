@@ -26,6 +26,7 @@ public class JobDetail {
 	protected String instance = null;
 	protected String msg;
 	protected int status;
+    public static final int ST_REFUSED = -3;
     public static final int ST_FAILED = -2;
     public static final int ST_INVALID = -1;
     public static final int ST_PENDING = 0;

@@ -89,12 +89,16 @@ public class JobRequest extends JobDetail{
 		return opCode == OP_STATUS;
 	}
 	
+	public void setConfigFullPath(String rootDir) {
+		configFile = rootDir + configFile + ".json";
+	}
+	
 	public JobResponse createResponse() {
 		JobResponse response = new JobResponse();
 		response.setRequestID(requestID);
 		response.setFlow(flow);
 		response.setInstance(instance);
-		response.setStatus(OP_STATUS);
+		response.setStatus(status);
 		return response;
 	}
 }

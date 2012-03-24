@@ -31,51 +31,60 @@ import org.fluxua.driver.JobDriver;
 import redis.clients.jedis.Jedis;
 
 public class ServiceManager implements Runnable {
-	private Jedis jedis;
-	private String requestQueue;
-	private String adminQueueIn;
-	private String adminQueueOut;
+	private String flowConfigRootDir;
 	private static final String COM_STOP = "stop";
 	private static final String COM_STATUS = "status";
 	private List<JobRequest> requests = new  ArrayList<JobRequest>();
     private BlockingQueue<JobResponse> queue = new ArrayBlockingQueue<JobResponse>(20);
     private ObjectMapper mapper = new ObjectMapper(); 
+    private MessagingService msgSvc;
+    private boolean pendingShutdown;
 	
 	public ServiceManager(String propFile)  throws Exception {
 		Properties prop = new Properties();
 		prop.load(new FileInputStream(propFile));
-		String redisHost = prop.getProperty("redis.server.host", "localhost");
-		int redisPort = new Integer(prop.getProperty("redis.server.port", "6379"));
-		System.out.println("host:" +redisHost + " redisPort:" + redisPort );
-		jedis = new Jedis(redisHost, redisPort);
 		
-		requestQueue = prop.getProperty("request.queue");
-		adminQueueIn = prop.getProperty("admin.queue.in");
-		adminQueueOut = prop.getProperty("admin.queue.out");
-		System.out.println("requestQueue:" +requestQueue + " adminQueueIn:" + adminQueueIn );
+		flowConfigRootDir = prop.getProperty("flow.config.root.dir"); 
+		msgSvc = new MessagingService(prop);
 	}
 
 	@Override
 	public void run() {
+		String responseSt;
+		JobResponse response;
+		
 		while (true) {
 			//request queue
-			String requestSt = jedis.rpop(requestQueue);
+			String requestSt = msgSvc.receiveJobRequest();
 			if (null != requestSt) {
 				System.out.println("got from request queue:" + requestSt);
 		        try {
 					JobRequest request = mapper.readValue(requestSt, JobRequest.class);
 					if (request.isExecuteRequest()) {
-			        	//launch the flow
-						requests.add(request);
-						FlowLauncher launcher = new FlowLauncher(request, queue);
-						launcher.start();
-						
-						JobResponse response = request.createResponse();
-						response.setStatus(JobResponse.ST_PENDING);
-				        String responseSt = mapper.writeValueAsString(response);
-				        jedis.lpush(request.getReplyChannel(), responseSt);
+						if (!pendingShutdown) {
+				        	//launch the flow
+							request.setConfigFullPath(flowConfigRootDir);
+							requests.add(request);
+							FlowLauncher launcher = new FlowLauncher(request, queue);
+							launcher.start();
+							
+							response = request.createResponse();
+							response.setStatus(JobResponse.ST_PENDING);
+						} else {
+							//refuse because of pending shutdown command
+							response = request.createResponse();
+							response.setStatus(JobResponse.ST_REFUSED);
+						}
+				        responseSt = mapper.writeValueAsString(response);
+				        msgSvc.replyJobRequest(request.getReplyChannel(), responseSt);
 					} else {
 						//return status
+						JobRequest req = getRequest(request.getRequestID());
+						if (null  != req) {
+							response = req.createResponse();
+					        responseSt = mapper.writeValueAsString(response);
+					        msgSvc.replyJobRequest(req.getReplyChannel(), responseSt);
+						}
 					}
 				} catch (Exception e) {
 					System.out.println("invalid request");
@@ -84,25 +93,43 @@ public class ServiceManager implements Runnable {
 
 			//check response queue for flow completion
 			try {
-				JobResponse response = queue.poll(1, TimeUnit.SECONDS);
+				response = queue.poll(1, TimeUnit.SECONDS);
 				if (null != response) {
-			        String responseSt = mapper.writeValueAsString(response);
+			        responseSt = mapper.writeValueAsString(response);
 			        JobRequest req = getRequest(response.getRequestID());
-			        jedis.lpush(req.getReplyChannel(), responseSt);
+			        req.setStatus(response.getStatus());
+			        msgSvc.replyJobRequest(req.getReplyChannel(), responseSt);
+			        
+			        //if no pending jobs and received shutdown request then quit
+					int numPending = numPendingJobs();
+					if (pendingShutdown && numPending == 0) {
+						//no pending jobs
+						msgSvc.replyAdminRequest("shutting down");
+						msgSvc.close();
+						break;
+					} 
 				}
 			} catch (Exception e) {
 				
 			}		
 			
 			//admin queue
-			String adminCom = jedis.rpop(adminQueueIn);
+			//String adminCom = jedis.rpop(adminQueueIn);
+			String adminCom = msgSvc.receiveAdminRequest();
 			if (null != adminCom) {
 				System.out.println("got from admin queue:" + adminCom);
 				if ( adminCom.equals(COM_STOP)) {
 					System.out.println("got stop command from admin queue....  shutting down");
-					jedis.lpush(adminQueueOut,"shutting down");
-					jedis.quit();
-					break;
+					int numPending = numPendingJobs();
+					if (numPending == 0) {
+						//no pending jobs
+						msgSvc.replyAdminRequest("shutting down");
+						msgSvc.close();
+						break;
+					} else {
+						pendingShutdown = true;
+						msgSvc.replyAdminRequest("will shutting down when " + numPending + " pending jobs complete" );
+					}
 				}
 			}
 		}
@@ -118,6 +145,17 @@ public class ServiceManager implements Runnable {
 		}
 		
 		return req;
+	}
+	
+	
+	public int numPendingJobs() {
+		int numPending = 0;
+		for (JobRequest request : requests) {
+			if (request.getStatus() == JobDetail.ST_PENDING ) {
+				++numPending;
+			}
+		}		
+		return numPending;
 	}
 
 }

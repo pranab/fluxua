@@ -48,9 +48,11 @@ public class FlowLauncher extends Thread {
 	           if (driver.isInError()) {
 	        	   response.setMsg(driver.getErrorMsg());
 	        	   response.setStatus(JobResponse.ST_FAILED);
+	           } else {
+	        	   response.setStatus(JobResponse.ST_SUCCEEDED);
 	           }
            } catch (Exception e) {
-        	   response.setStatus(JobResponse.ST_SUCCEEDED);
+        	   response.setStatus(JobResponse.ST_FAILED);
            }
     	}
     	try {
