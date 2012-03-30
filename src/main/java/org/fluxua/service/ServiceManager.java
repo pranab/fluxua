@@ -39,6 +39,7 @@ public class ServiceManager implements Runnable {
     private ObjectMapper mapper = new ObjectMapper(); 
     private MessagingService msgSvc;
     private boolean pendingShutdown;
+	private List<String> refusedRequests = new  ArrayList<String>();
 	
 	public ServiceManager(String propFile)  throws Exception {
 		Properties prop = new Properties();
@@ -50,28 +51,45 @@ public class ServiceManager implements Runnable {
 
 	@Override
 	public void run() {
-		String responseSt;
-		JobResponse response;
+		String requestSt = null;
+		String responseSt = null;
+		JobRequest request = null;
+		JobResponse response = null;;
 		
 		while (true) {
 			//request queue
-			String requestSt = msgSvc.receiveJobRequest();
+			requestSt = msgSvc.receiveJobRequest();
 			if (null != requestSt) {
 				System.out.println("got from request queue:" + requestSt);
 		        try {
-					JobRequest request = mapper.readValue(requestSt, JobRequest.class);
+					request = mapper.readValue(requestSt, JobRequest.class);
 					if (request.isExecuteRequest()) {
 						if (!pendingShutdown) {
 				        	//launch the flow
-							request.setConfigFullPath(flowConfigRootDir);
-							requests.add(request);
-							FlowLauncher launcher = new FlowLauncher(request, queue);
-							launcher.start();
-							
-							response = request.createResponse();
-							response.setStatus(JobResponse.ST_PENDING);
+							if (request.isNewJob()) {
+								//new job
+								request.setConfigFullPath(flowConfigRootDir);
+								requests.add(request);
+								FlowLauncher launcher = new FlowLauncher(request, queue);
+								launcher.start();
+								
+								response = request.createResponse();
+								response.setStatus(JobResponse.ST_PENDING);
+							} else {
+								//previously failed job
+								requestSt = msgSvc.getFailedJob(request.getRequestID());
+								request = mapper.readValue(requestSt, JobRequest.class);
+								request.setJobsToSkip(request.getProcessedJobs());
+								requests.add(request);
+								FlowLauncher launcher = new FlowLauncher(request, queue);
+								launcher.start();
+								
+								response = request.createResponse();
+								response.setStatus(JobResponse.ST_PENDING);
+							}
 						} else {
 							//refuse because of pending shutdown command
+							refusedRequests.add(requestSt);
 							response = request.createResponse();
 							response.setStatus(JobResponse.ST_REFUSED);
 						}
@@ -98,12 +116,19 @@ public class ServiceManager implements Runnable {
 			        responseSt = mapper.writeValueAsString(response);
 			        JobRequest req = getRequest(response.getRequestID());
 			        req.setStatus(response.getStatus());
+			        if (response.isFailed()) {
+			        	//save in failed job storage
+			        	req.setProcessedJobs(response.getProcessedJobs());
+			        }
 			        msgSvc.replyJobRequest(req.getReplyChannel(), responseSt);
 			        
 			        //if no pending jobs and received shutdown request then quit
 					int numPending = numPendingJobs();
 					if (pendingShutdown && numPending == 0) {
 						//no pending jobs
+						for (String reqSt  :  refusedRequests) {
+							msgSvc.sendJobRequest(requestSt);
+						}
 						msgSvc.replyAdminRequest("shutting down");
 						msgSvc.close();
 						break;
@@ -114,7 +139,6 @@ public class ServiceManager implements Runnable {
 			}		
 			
 			//admin queue
-			//String adminCom = jedis.rpop(adminQueueIn);
 			String adminCom = msgSvc.receiveAdminRequest();
 			if (null != adminCom) {
 				System.out.println("got from admin queue:" + adminCom);

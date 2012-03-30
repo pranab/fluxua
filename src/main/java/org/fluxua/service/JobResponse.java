@@ -17,6 +17,12 @@
 
 package org.fluxua.service;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class JobResponse extends JobDetail {
 	
+	public boolean isFailed() {
+		return status == ST_FAILED;
+	}
 }

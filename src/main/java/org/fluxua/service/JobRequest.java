@@ -31,9 +31,12 @@ public class JobRequest extends JobDetail{
     
     public JobRequest() {
     	super();
-    	requestID = UUID.randomUUID().toString();
     }
 
+    public void createRequestID() {
+    	requestID = UUID.randomUUID().toString();
+    }
+    
 	public String getConfigFile() {
 		return configFile;
 	}
@@ -91,6 +94,10 @@ public class JobRequest extends JobDetail{
 	
 	public void setConfigFullPath(String rootDir) {
 		configFile = rootDir + configFile + ".json";
+	}
+	
+	public boolean isNewJob() {
+		return null == requestID;
 	}
 	
 	public JobResponse createResponse() {

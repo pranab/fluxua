@@ -48,6 +48,7 @@ public class JobDriver {
     private DriveMode mode =DriveMode. INTERACTIVE;
     private String errorMsg;
     private  boolean inError = false;
+    private List<String> processedJobs = new ArrayList<String>();
 
     public JobDriver(String flowName, String instance, List<String> jobsToSkip) {
         FileInputStream fis = null;
@@ -92,6 +93,7 @@ public class JobDriver {
                         //launch new jobs
                         for (String jobName : jobNames){
                             if (jobsToSkip.contains(jobName)){
+                            	processedJobs.add(jobName);
                                 continue;
                             }
 
@@ -153,6 +155,7 @@ public class JobDriver {
                         --jobInstanceCount;
                         if (status.isValid()){
                             flowAdmin.notifyJobComplete(flowName, status.getJobName(), status.outputPath);
+                            processedJobs.add(status.getJobName());
                         } else {
                             flowAdmin.notifyJobFailed(flowName, status.getJobName());
                             inError = true;
@@ -175,6 +178,10 @@ public class JobDriver {
         }
 
     }
+
+	public List<String> getProcessedJobs() {
+		return processedJobs;
+	}
 
     public static class JobStatus {
         private String jobName;
@@ -257,7 +264,7 @@ public class JobDriver {
 	public static void main(String[] cmdLineArgs) throws Exception {
         Map<String, String> argMap = parseCommandLineArgs(cmdLineArgs);
         String mode  = argMap.get("m");
-        if (mode.equals("i")) {
+        if (mode.equals("int")) {
         	runInteractive(argMap);
         } else {
         	runService(argMap);

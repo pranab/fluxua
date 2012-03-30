@@ -26,6 +26,7 @@ public class MessagingService {
 	private String requestQueue;
 	private String adminQueueIn;
 	private String adminQueueOut;
+	private String failedJobsStore;
 	
 	public MessagingService(Properties prop) {
 		String redisHost = prop.getProperty("redis.server.host", "localhost");
@@ -36,12 +37,18 @@ public class MessagingService {
 		requestQueue = prop.getProperty("request.queue");
 		adminQueueIn = prop.getProperty("admin.queue.in");
 		adminQueueOut = prop.getProperty("admin.queue.out");
-		System.out.println("requestQueue:" +requestQueue + " adminQueueIn:" + adminQueueIn );
+		failedJobsStore = prop.getProperty("failed.jobs.store");
+		System.out.println("requestQueue:" +requestQueue + 
+				" adminQueueIn:" + adminQueueIn );
 	}
 	
 	public String receiveJobRequest() {
 		String requestSt = jedis.rpop(requestQueue);
 		return requestSt;
+	}
+
+	public void sendJobRequest(String requestSt) {
+		 jedis.lpush(requestQueue,  requestSt);
 	}
 
 	public void replyJobRequest(String repChannel, String response) {
@@ -55,6 +62,14 @@ public class MessagingService {
 	
 	public void replyAdminRequest( String response) {
         jedis.lpush(adminQueueOut, response);
+	}
+	
+	public void saveFailedJob (String requestID, String requestSt) {
+		jedis.hset(failedJobsStore,  requestID, requestSt);
+	}
+
+	public String  getFailedJob (String requestID) {
+		return jedis.hget(failedJobsStore, requestID);
 	}
 	
 	public void close() {

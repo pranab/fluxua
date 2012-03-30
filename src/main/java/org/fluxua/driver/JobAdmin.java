@@ -70,9 +70,9 @@ public class JobAdmin {
             }   
             
             args.add("-D");
-            args.add("fluxua.job.name=" + jobConfig.getName());
+            args.add("job.name=" + jobConfig.getName());
             args.add("-D");
-            args.add("fluxua.job.instance=" + jobInstance);
+            args.add("job.instance=" + jobInstance);
             
             List<String> allInputPaths = new ArrayList<String>();
             List<String> confInputPaths = jobConfig.getInputPaths();

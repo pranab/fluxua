@@ -22,10 +22,11 @@ import java.util.List;
 
 public class JobDetail {
 	protected String requestID;
-	protected String flow = null;
-	protected String instance = null;
+	protected String flow;
+	protected String instance;
 	protected String msg;
 	protected int status;
+    private List<String> processedJobs = new ArrayList<String>();
     public static final int ST_REFUSED = -3;
     public static final int ST_FAILED = -2;
     public static final int ST_INVALID = -1;
@@ -61,5 +62,11 @@ public class JobDetail {
 	}
 	public void setStatus(int status) {
 		this.status = status;
+	}
+	public List<String> getProcessedJobs() {
+		return processedJobs;
+	}
+	public void setProcessedJobs(List<String> processedJobs) {
+		this.processedJobs = processedJobs;
 	}
 }
